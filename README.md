@@ -1,4 +1,4 @@
-![logo](./assets/fugo.png)
+![logo](assets/fugo.png)
 
 # FU-GO - Go Uninstaller
 
