@@ -49,3 +49,5 @@ Contributions are welcome! Feel free to:
 Report bugs
 Suggest features
 Submit pull requests
+
+## 🤝 Stay single
