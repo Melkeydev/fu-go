@@ -340,7 +340,7 @@ func (m model) View() string {
 
 	s = renderFuGoLogo(m.width) + "\n"
 
-	s += lipgloss.PlaceHorizontal(m.width, lipgloss.Center, subtitleStyle.Render("The Go Version Uninstaller")) + "\n\n"
+	s += lipgloss.PlaceHorizontal(m.width, lipgloss.Center, subtitleStyle.Render("The Go Uninstaller")) + "\n\n"
 
 	switch m.state {
 	case "loading":
