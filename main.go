@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -23,6 +24,8 @@ const fugoASCII = `
 ██║     ╚██████╔╝     ╚██████╔╝╚██████╔╝
 ╚═╝      ╚═════╝       ╚═════╝  ╚═════╝ 
 `
+
+const simulationMode = true
 
 var (
 	logoGradient = []string{
@@ -207,6 +210,11 @@ type deleteGoCompleted struct {
 
 func deleteGoVersionsCmd(path string) tea.Cmd {
 	return func() tea.Msg {
+		if simulationMode {
+			time.Sleep(2 * time.Second)
+			return deleteGoCompleted{success: true, err: nil}
+		}
+
 		var err error
 
 		tempFile := filepath.Join(path, "fugo-test-file")
@@ -342,6 +350,11 @@ func (m model) View() string {
 
 	s += lipgloss.PlaceHorizontal(m.width, lipgloss.Center, subtitleStyle.Render("The Go Version Uninstaller")) + "\n\n"
 
+	if simulationMode {
+		simulationNotice := infoStyle.Render("[SIMULATION MODE - No actual deletions will occur]")
+		s += lipgloss.PlaceHorizontal(m.width, lipgloss.Center, simulationNotice) + "\n\n"
+	}
+
 	switch m.state {
 	case "loading":
 		loadingMsg := fmt.Sprintf("%s Searching for Go installations...", m.spinner.View())
@@ -406,3 +419,4 @@ func main() {
 		os.Exit(1)
 	}
 }
+
