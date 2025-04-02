@@ -1,1 +1,11 @@
+# Ignore the following files and directories.
 main
+
+# Ignore editor and IDE files.
+# - Visual Studio Code
+.vscode/*
+# - JetBrains IDEs
+.idea/*
+
+## Ignore macOS desktop services store files.
+**/.DS_Store
