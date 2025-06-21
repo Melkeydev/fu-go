@@ -6,6 +6,8 @@
 
 Are you angry and want to get your frustrations out? Well why not take it out on the Go programming language!
 
+A blazingly fast way to remove Go from your system.
+
 ## Features
 
 - Uninstalls all versions of Go on your machine!
