@@ -1,5 +1,8 @@
 <!-- markdownlint-disable first-line-h1 no-inline-html -->
 
+⚠️ DISCLAIMER ⚠️
+USE AT YOUR OWN RISK! This tool was created as a joke for a YouTube video and is NOT thoroughly tested. It will attempt to remove Go installations from your system, which could potentially cause issues or remove files you didn't intend to delete. The authors are not responsible for any damage, data loss, or system issues that may result from using this software. Please ensure you have backups and understand the risks before proceeding.
+
 ![logo](assets/fugo.png)
 
 # FU-GO - Go Uninstaller
