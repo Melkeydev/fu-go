@@ -79,6 +79,21 @@ var (
 			Foreground(lipgloss.Color("#82AAFF"))
 )
 
+var criticalPaths = []string{
+	"/", "/usr", "/bin", "/etc", "/home", "/root", "/var", "/opt",
+	"C:\\", "C:\\Windows", "C:\\Program Files", "C:\\Users",
+}
+
+func isCriticalPath(path string) bool {
+	cleanPath := filepath.Clean(path)
+	for _, critical := range criticalPaths {
+		if cleanPath == critical {
+			return true
+		}
+	}
+	return false
+}
+
 type item struct {
 	title, desc string
 }
@@ -140,7 +155,6 @@ type foundGoVersions struct {
 func findGoVersionsCmd() tea.Msg {
 	var goPath string
 	var versions []string
-
 	switch runtime.GOOS {
 	case "windows":
 		goPath = filepath.Join(os.Getenv("USERPROFILE"), "go")
@@ -158,9 +172,38 @@ func findGoVersionsCmd() tea.Msg {
 		if _, err := os.Stat("/usr/bin/go"); err == nil {
 			cmd := exec.Command("which", "go")
 			if output, err := cmd.Output(); err == nil {
-				goPath = strings.TrimSpace(string(output))
-				goPath = strings.TrimSuffix(goPath, "/bin/go")
+				whichPath := strings.TrimSpace(string(output))
+				if strings.HasSuffix(whichPath, "/bin/go") {
+					derivedPath := strings.TrimSuffix(whichPath, "/bin/go")
+
+					if isCriticalPath(derivedPath) {
+						return foundGoVersions{
+							versions: []string{},
+							path:     "",
+							err:      fmt.Errorf("refusing to operate on critical system directory: %s", derivedPath),
+						}
+					}
+
+					if !strings.Contains(strings.ToLower(derivedPath), "go") {
+						return foundGoVersions{
+							versions: []string{},
+							path:     "",
+							err:      fmt.Errorf("derived path does not appear to be a Go installation: %s", derivedPath),
+						}
+					}
+
+					goPath = derivedPath
+				}
 			}
+		}
+	}
+
+	// GUARD RAIL: Final check before proceeding
+	if isCriticalPath(goPath) {
+		return foundGoVersions{
+			versions: []string{},
+			path:     "",
+			err:      fmt.Errorf("refusing to operate on critical system directory: %s", goPath),
 		}
 	}
 
@@ -170,7 +213,6 @@ func findGoVersionsCmd() tea.Msg {
 			versionStr := strings.TrimSpace(string(output))
 			versions = append(versions, versionStr)
 		}
-
 		homeDir, err := os.UserHomeDir()
 		if err == nil {
 			gvmPath := filepath.Join(homeDir, ".gvm", "gos")
@@ -184,7 +226,6 @@ func findGoVersionsCmd() tea.Msg {
 			}
 		}
 	}
-
 	if len(versions) == 0 {
 		cmd := exec.Command("go", "version")
 		if output, err := cmd.Output(); err == nil {
@@ -192,7 +233,6 @@ func findGoVersionsCmd() tea.Msg {
 			versions = append(versions, versionStr)
 		}
 	}
-
 	return foundGoVersions{
 		versions: versions,
 		path:     goPath,
@@ -401,8 +441,21 @@ func (m model) View() string {
 
 func main() {
 	p := tea.NewProgram(initialModel(), tea.WithAltScreen())
-	if _, err := p.Run(); err != nil {
-		fmt.Printf("Error: %v\n", err)
+	teaModel, err := p.Run()
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error running application: %v\n", err)
+		os.Exit(1)
+	}
+
+	m, ok := teaModel.(model)
+	if !ok {
+		fmt.Fprintf(os.Stderr, "Error: unexpected model type\n")
+		os.Exit(1)
+	}
+
+	if m.err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", m.err)
 		os.Exit(1)
 	}
 }
