@@ -441,8 +441,21 @@ func (m model) View() string {
 
 func main() {
 	p := tea.NewProgram(initialModel(), tea.WithAltScreen())
-	if _, err := p.Run(); err != nil {
-		fmt.Printf("Error: %v\n", err)
+	teaModel, err := p.Run()
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error running application: %v\n", err)
+		os.Exit(1)
+	}
+
+	m, ok := teaModel.(model)
+	if !ok {
+		fmt.Fprintf(os.Stderr, "Error: unexpected model type\n")
+		os.Exit(1)
+	}
+
+	if m.err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", m.err)
 		os.Exit(1)
 	}
 }
