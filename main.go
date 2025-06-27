@@ -76,6 +76,13 @@ var (
 			Foreground(lipgloss.Color("#82AAFF"))
 )
 
+// Confirmation step constants
+const (
+	ConfirmationStepInitial = iota
+	ConfirmationStepHash
+	ConfirmationStepDestroy
+)
+
 var criticalPaths = []string{
 	"/", "/usr", "/bin", "/etc", "/home", "/root", "/var", "/opt",
 	"C:\\", "C:\\Windows", "C:\\Program Files", "C:\\Users",
@@ -238,7 +245,7 @@ func initialModel() model {
 		width:            80,
 		height:           24,
 		err:              nil,
-		confirmationStep: 0,
+		confirmationStep: ConfirmationStepInitial,
 		dryRun:           true,
 		backupPath:       backupDir,
 		logFile:          logger,
@@ -290,14 +297,21 @@ func detectGoInstallations() []GoInstallation {
 
 	for _, path := range officialPaths {
 		if info, err := os.Stat(path); err == nil && info.IsDir() {
-			version := getGoVersion(path)
+			version, versionErr := getGoVersion(path)
+			if versionErr != nil {
+				version = "unknown version"
+			}
 			size := getDirSize(path)
+			permissions, permErr := getPermissions(path)
+			if permErr != nil {
+				permissions = "unknown"
+			}
 			installations = append(installations, GoInstallation{
 				Path:        path,
 				Version:     version,
 				Source:      "official",
 				Size:        size,
-				Permissions: getPermissions(path),
+				Permissions: permissions,
 				Verified:    true,
 			})
 		}
@@ -311,14 +325,21 @@ func detectGoInstallations() []GoInstallation {
 			for _, entry := range entries {
 				if entry.IsDir() && strings.HasPrefix(entry.Name(), "go") {
 					path := filepath.Join(gvmPath, entry.Name())
-					version := getGoVersion(path)
+					version, versionErr := getGoVersion(path)
+					if versionErr != nil {
+						version = "unknown version"
+					}
 					size := getDirSize(path)
+					permissions, permErr := getPermissions(path)
+					if permErr != nil {
+						permissions = "unknown"
+					}
 					installations = append(installations, GoInstallation{
 						Path:        path,
 						Version:     version,
 						Source:      "gvm",
 						Size:        size,
-						Permissions: getPermissions(path),
+						Permissions: permissions,
 						Verified:    true,
 					})
 				}
@@ -331,14 +352,21 @@ func detectGoInstallations() []GoInstallation {
 		packagePaths := []string{"/usr/lib/golang", "/usr/share/golang"}
 		for _, path := range packagePaths {
 			if info, err := os.Stat(path); err == nil && info.IsDir() {
-				version := getGoVersion(path)
+				version, versionErr := getGoVersion(path)
+				if versionErr != nil {
+					version = "unknown version"
+				}
 				size := getDirSize(path)
+				permissions, permErr := getPermissions(path)
+				if permErr != nil {
+					permissions = "unknown"
+				}
 				installations = append(installations, GoInstallation{
 					Path:        path,
 					Version:     version,
 					Source:      "package_manager",
 					Size:        size,
-					Permissions: getPermissions(path),
+					Permissions: permissions,
 					Verified:    true,
 				})
 			}
@@ -353,14 +381,21 @@ func detectGoInstallations() []GoInstallation {
 				for _, entry := range entries {
 					if entry.IsDir() {
 						path := filepath.Join(basePath, entry.Name())
-						version := getGoVersion(path)
+						version, versionErr := getGoVersion(path)
+						if versionErr != nil {
+							version = "unknown version"
+						}
 						size := getDirSize(path)
+						permissions, permErr := getPermissions(path)
+						if permErr != nil {
+							permissions = "unknown"
+						}
 						installations = append(installations, GoInstallation{
 							Path:        path,
 							Version:     version,
 							Source:      "brew",
 							Size:        size,
-							Permissions: getPermissions(path),
+							Permissions: permissions,
 							Verified:    true,
 						})
 					}
@@ -372,7 +407,7 @@ func detectGoInstallations() []GoInstallation {
 	return installations
 }
 
-func getGoVersion(goPath string) string {
+func getGoVersion(goPath string) (string, error) {
 	goExec := filepath.Join(goPath, "bin", "go")
 	if runtime.GOOS == "windows" {
 		goExec += ".exe"
@@ -381,17 +416,17 @@ func getGoVersion(goPath string) string {
 	if _, err := os.Stat(goExec); err == nil {
 		cmd := exec.Command(goExec, "version")
 		if output, err := cmd.Output(); err == nil {
-			return strings.TrimSpace(string(output))
+			return strings.TrimSpace(string(output)), nil
 		}
 	}
 
 	// Fallback: try to determine version from directory structure
 	versionFile := filepath.Join(goPath, "VERSION")
 	if data, err := os.ReadFile(versionFile); err == nil {
-		return "go version " + strings.TrimSpace(string(data))
+		return "go version " + strings.TrimSpace(string(data)), nil
 	}
 
-	return "unknown version"
+	return "", fmt.Errorf("unable to determine Go version for path: %s", goPath)
 }
 
 func getDirSize(path string) int64 {
@@ -408,12 +443,12 @@ func getDirSize(path string) int64 {
 	return size
 }
 
-func getPermissions(path string) string {
+func getPermissions(path string) (string, error) {
 	info, err := os.Stat(path)
 	if err != nil {
-		return "unknown"
+		return "", fmt.Errorf("failed to get permissions for %s: %w", path, err)
 	}
-	return info.Mode().String()
+	return info.Mode().String(), nil
 }
 
 func findGoVersionsCmd() tea.Msg {
@@ -679,9 +714,9 @@ func (m model) handleConfirmation() (tea.Model, tea.Cmd) {
 	input := strings.TrimSpace(m.textInput.Value())
 
 	switch m.confirmationStep {
-	case 0:
+	case ConfirmationStepInitial:
 		if strings.ToUpper(input) == "CONFIRM" {
-			m.confirmationStep = 1
+			m.confirmationStep = ConfirmationStepHash
 			m.textInput.SetValue("")
 			m.textInput.Placeholder = fmt.Sprintf("Type hash: %s", m.hashConfirmation)
 			if m.logFile != nil {
@@ -689,9 +724,9 @@ func (m model) handleConfirmation() (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		}
-	case 1:
+	case ConfirmationStepHash:
 		if input == m.hashConfirmation {
-			m.confirmationStep = 2
+			m.confirmationStep = ConfirmationStepDestroy
 			m.textInput.SetValue("")
 			m.textInput.Placeholder = "Type 'DESTROY' to proceed"
 			if m.logFile != nil {
@@ -699,7 +734,7 @@ func (m model) handleConfirmation() (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		}
-	case 2:
+	case ConfirmationStepDestroy:
 		if strings.ToUpper(input) == "DESTROY" {
 			if m.logFile != nil {
 				m.logFile.Log("INFO", "All confirmation steps passed, proceeding with operation")
@@ -800,11 +835,11 @@ func (m model) View() string {
 
 		// Confirmation steps
 		switch m.confirmationStep {
-		case 0:
+		case ConfirmationStepInitial:
 			s += "Step 1/3: " + m.textInput.View() + "\n"
-		case 1:
+		case ConfirmationStepHash:
 			s += "Step 2/3: " + m.textInput.View() + "\n"
-		case 2:
+		case ConfirmationStepDestroy:
 			s += "Step 3/3: " + m.textInput.View() + "\n"
 		}
 

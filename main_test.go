@@ -83,9 +83,12 @@ func TestDetectGoInstallations(t *testing.T) {
 
 func TestGetGoVersion(t *testing.T) {
 	// Test with non-existent path
-	version := getGoVersion("/non/existent/path")
-	if version != "unknown version" {
-		t.Errorf("Expected 'unknown version', got '%s'", version)
+	version, err := getGoVersion("/non/existent/path")
+	if err == nil {
+		t.Error("Expected error for non-existent path, got nil")
+	}
+	if version != "" {
+		t.Errorf("Expected empty string on error, got '%s'", version)
 	}
 }
 
@@ -108,9 +111,9 @@ func TestGetDirSize(t *testing.T) {
 
 func TestGetPermissions(t *testing.T) {
 	// Test with current directory
-	permissions := getPermissions(".")
-	if permissions == "unknown" {
-		t.Error("Expected valid permissions, got 'unknown'")
+	permissions, err := getPermissions(".")
+	if err != nil {
+		t.Errorf("Expected no error for current directory, got: %v", err)
 	}
 	if permissions == "" {
 		t.Error("Expected non-empty permissions string")
