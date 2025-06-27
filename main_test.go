@@ -182,8 +182,17 @@ func TestGoInstallationStruct(t *testing.T) {
 	if installation.Path != "/usr/local/go" {
 		t.Error("GoInstallation path not set correctly")
 	}
+	if installation.Version != "go version go1.21.0 linux/amd64" {
+		t.Error("GoInstallation version not set correctly")
+	}
 	if installation.Source != "official" {
 		t.Error("GoInstallation source not set correctly")
+	}
+	if installation.Size != 1024 {
+		t.Error("GoInstallation size not set correctly")
+	}
+	if installation.Permissions != "drwxr-xr-x" {
+		t.Error("GoInstallation permissions not set correctly")
 	}
 	if !installation.Verified {
 		t.Error("GoInstallation should be verified")

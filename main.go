@@ -42,14 +42,6 @@ var (
 			Padding(1).
 			MarginBottom(1)
 
-	titleStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("#FAFAFA")).
-			Background(lipgloss.Color("#7D56F4")).
-			PaddingLeft(2).
-			PaddingRight(2).
-			MarginBottom(1)
-
 	subtitleStyle = lipgloss.NewStyle().
 			Italic(true).
 			Foreground(lipgloss.Color("#C792EA")).
@@ -590,9 +582,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 		case "enter":
-			if m.state == "confirm" {
+			switch m.state {
+			case "confirm":
 				return m.handleConfirmation()
-			} else if m.state == "complete" {
+			case "complete":
 				return m, tea.Quit
 			}
 		}
@@ -621,6 +614,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		for _, v := range m.goVersions {
 			items = append(items, item{title: v, desc: "Will be removed"})
 		}
+		m.list = list.New(items, list.NewDefaultDelegate(), 80, 20)
+		m.list.Title = "Go Installations to Remove"
 
 		m.state = "confirm"
 		return m, nil
