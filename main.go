@@ -175,12 +175,7 @@ func createBackup(sourcePath, backupDir string) error {
 	backupName := fmt.Sprintf("go_backup_%s.tar.gz", time.Now().Format("20060102_150405"))
 	backupPath := filepath.Join(backupDir, backupName)
 
-	var cmd *exec.Cmd
-	if runtime.GOOS == "windows" {
-		cmd = exec.Command("tar", "-czf", backupPath, "-C", filepath.Dir(sourcePath), filepath.Base(sourcePath))
-	} else {
-		cmd = exec.Command("tar", "-czf", backupPath, "-C", filepath.Dir(sourcePath), filepath.Base(sourcePath))
-	}
+	cmd := exec.Command("tar", "-czf", backupPath, "-C", filepath.Dir(sourcePath), filepath.Base(sourcePath))
 
 	return cmd.Run()
 }
